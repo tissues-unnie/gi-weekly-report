@@ -1,5 +1,7 @@
 // Firebase 연동 (firebase.js 먼저 로드)
 import "./firebase.js";
+import { ACTIVE_COMPANY } from "./config.js";
+console.log("현재 회사:", ACTIVE_COMPANY);
 
 // ═══════════════════════════════════════════════════
 //  DATA MODEL
