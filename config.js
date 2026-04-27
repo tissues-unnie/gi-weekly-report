@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════
-//  Firebase 설정 — 여기만 바꾸면 됨
-// ═══════════════════════════════════════
-
 export const FIREBASE_CONFIGS = {
   gi: {
     apiKey: "AIzaSyD4uQZsSOq2Aqg6RXuU8wFw7ABWKbAMOjo",
@@ -19,7 +15,7 @@ export const FIREBASE_CONFIGS = {
     messagingSenderId: "375444525955",
     appId: "1:375444525955:web:6351b410715ced391c1cb6"
   },
-  sample: {
+  personal: {
     apiKey: "AIzaSyBGU8pYEMQh9l8vXuGkT6Z0GuzLqGbq-2g",
     authDomain: "sample-report-c1185.firebaseapp.com",
     projectId: "sample-report-c1185",
@@ -29,7 +25,5 @@ export const FIREBASE_CONFIGS = {
   }
 };
 
-/* ===== 여기만 바꾸면 됨 ===== */
-export const ACTIVE_COMPANY = "gi";
-// export const ACTIVE_COMPANY = "public";
-// export const ACTIVE_COMPANY = "sample";
+const params = new URLSearchParams(window.location.search);
+export const ACTIVE_COMPANY = params.get("company") || "gi";
