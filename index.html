@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko" id="html-root">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>주간업무보고</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Firebase (설정은 config.js에서) -->
+  <script type="module" src="firebase.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-hd">
+    <div class="sb-chip" id="sb-chip">WEEKLY REPORT</div>
+    <div class="sb-title" id="sb-title">주간업무보고</div>
+    <div class="sb-week" id="sb-week">2026년</div>
+  </div>
+  <nav id="nav-list"><div class="nav-lbl">목차</div></nav>
+  <div class="nav-drop-root" id="nav-drop-root">↑ 여기에 드롭: 폴더 밖으로 이동</div>
+</aside>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <span class="tb-badge view" id="mode-badge">VIEW</span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn btn-edit" id="btn-edit" onclick="enterEdit()">✏️ 편집 모드</button>
+  <button class="tb-btn btn-save" id="btn-save" onclick="saveEdit()" style="display:none">✅ 저장</button>
+  <button class="tb-btn btn-cancel" id="btn-cancel" onclick="cancelEdit()" style="display:none">✕ 취소</button>
+  <button class="tb-btn btn-add-sec" id="btn-add-sec" onclick="openSecModal()" style="display:none">＋ 섹션</button>
+  <button class="tb-btn btn-cancel" id="btn-copy-sec" onclick="copyCurrentSection()" style="display:none">📄 섹션 복사</button>
+  <button class="tb-btn btn-add-folder" id="btn-add-folder" onclick="openFolderModal()" style="display:none">📁 폴더</button>
+  <button class="tb-btn btn-theme" onclick="toggleThemePanel()">🎨 테마</button>
+  <button class="tb-btn btn-dl" onclick="downloadFile()">⬇ 다운로드</button>
+</div>
+
+<!-- FORMAT BAR -->
+<div class="fmt-bar" id="fmt-bar">
+  <button class="fmt-btn" id="fb-bold"   onclick="fc('bold')"          title="굵게"><b>B</b></button>
+  <button class="fmt-btn" id="fb-italic" onclick="fc('italic')"        title="기울임"><i>I</i></button>
+  <button class="fmt-btn" id="fb-under"  onclick="fc('underline')"     title="밑줄"><u>U</u></button>
+  <button class="fmt-btn" id="fb-strike" onclick="fc('strikeThrough')" title="취소선"><s>S</s></button>
+  <div class="fmt-sep"></div>
+  <button class="fmt-btn" onmousedown="event.preventDefault()" onclick="restoreSelection();applyFontSizeStep(-1)">−</button>
+  <span id="fb-size-display" style="font-size:11px;font-family:'DM Mono',monospace;min-width:24px;text-align:center">13</span>
+  <button class="fmt-btn" onmousedown="event.preventDefault()" onclick="restoreSelection();applyFontSizeStep(1)">+</button>
+  <div class="fmt-sep"></div>
+  <span style="font-size:10px;color:var(--muted)">글자</span>
+  <div class="fmt-color-wrap" title="글자색">
+    <input class="fmt-hex" id="fb-txt-hex" placeholder="1a1a2e" maxlength="7" oninput="syncHex('txt',this.value);applyHexColor('text',this.value)">
+    <label class="fmt-swatch"><input type="color" id="fb-txt-picker" value="#1a1a2e" oninput="syncHex('txt',this.value);applyHexColor('text',this.value)"></label>
+  </div>
+  <div class="fmt-sep"></div>
+  <span style="font-size:10px;color:var(--muted)">배경</span>
+  <div class="fmt-color-wrap" title="배경 하이라이트">
+    <input class="fmt-hex" id="fb-bg-hex" placeholder="ffffff" maxlength="7" oninput="syncHex('bg',this.value);applyHexColor('bg',this.value)">
+    <label class="fmt-swatch"><input type="color" id="fb-bg-picker" value="#ffffff" oninput="syncHex('bg',this.value);applyHexColor('bg',this.value)"></label>
+  </div>
+  <div class="fmt-sep"></div>
+  <button class="fmt-btn" onclick="fa('left')"   title="왼쪽"><svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="0" y="5" width="10" height="2" rx="1"/><rect x="0" y="10" width="14" height="2" rx="1"/></svg></button>
+  <button class="fmt-btn" onclick="fa('center')" title="가운데"><svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="2" y="5" width="10" height="2" rx="1"/><rect x="0" y="10" width="14" height="2" rx="1"/></svg></button>
+  <button class="fmt-btn" onclick="fa('right')"  title="오른쪽"><svg width="14" height="12" viewBox="0 0 14 12" fill="currentColor"><rect x="0" y="0" width="14" height="2" rx="1"/><rect x="4" y="5" width="10" height="2" rx="1"/><rect x="0" y="10" width="14" height="2" rx="1"/></svg></button>
+  <div class="fmt-sep"></div>
+  <button class="fmt-btn" onclick="fc('removeFormat')" style="font-size:12px;width:auto;padding:0 6px">✕서식</button>
+</div>
+
+<!-- THEME PANEL -->
+<div class="theme-panel" id="theme-panel">
+  <div class="tp-header"><h4>🎨 테마 색상 설정</h4><button class="tp-close" onclick="toggleThemePanel()">✕</button></div>
+  <div class="tp-body">
+    <div class="tp-section-lbl">프리셋</div><div class="tp-presets" id="tp-presets"></div>
+    <div class="tp-section-lbl">배경 &amp; 레이아웃</div>
+    <div class="tp-row"><label>전체 배경</label>    <input class="tp-hex" id="th-bg"    maxlength="7" oninput="onThemeHex('bg',this.value)">   <label class="tp-color-btn"><div class="tp-color-preview" id="thp-bg"></div>    <input type="color" oninput="onThemeColor('bg',this.value)"></label></div>
+    <div class="tp-row"><label>사이드바 배경</label>  <input class="tp-hex" id="th-sb"    maxlength="7" oninput="onThemeHex('sb',this.value)">   <label class="tp-color-btn"><div class="tp-color-preview" id="thp-sb"></div>    <input type="color" oninput="onThemeColor('sb',this.value)"></label></div>
+    <div class="tp-row"><label>콘텐츠 테두리</label>  <input class="tp-hex" id="th-bdr"   maxlength="7" oninput="onThemeHex('bdr',this.value)">  <label class="tp-color-btn"><div class="tp-color-preview" id="thp-bdr"></div>   <input type="color" oninput="onThemeColor('bdr',this.value)"></label></div>
+    <div class="tp-section-lbl">강조 색상</div>
+    <div class="tp-row"><label>메인 강조</label>     <input class="tp-hex" id="th-ac"    maxlength="7" oninput="onThemeHex('ac',this.value)">   <label class="tp-color-btn"><div class="tp-color-preview" id="thp-ac"></div>    <input type="color" oninput="onThemeColor('ac',this.value)"></label></div>
+    <div class="tp-row"><label>보조 강조</label>     <input class="tp-hex" id="th-ac2"   maxlength="7" oninput="onThemeHex('ac2',this.value)">  <label class="tp-color-btn"><div class="tp-color-preview" id="thp-ac2"></div>   <input type="color" oninput="onThemeColor('ac2',this.value)"></label></div>
+    <div class="tp-row"><label>사이드바 강조</label>  <input class="tp-hex" id="th-sb-ac" maxlength="7" oninput="onThemeHex('sb-ac',this.value)"><label class="tp-color-btn"><div class="tp-color-preview" id="thp-sb-ac"></div><input type="color" oninput="onThemeColor('sb-ac',this.value)"></label></div>
+    <div class="tp-section-lbl">텍스트</div>
+    <div class="tp-row"><label>본문 텍스트</label>   <input class="tp-hex" id="th-txt"   maxlength="7" oninput="onThemeHex('txt',this.value)">  <label class="tp-color-btn"><div class="tp-color-preview" id="thp-txt"></div>   <input type="color" oninput="onThemeColor('txt',this.value)"></label></div>
+    <div class="tp-row"><label>보조 텍스트</label>   <input class="tp-hex" id="th-muted" maxlength="7" oninput="onThemeHex('muted',this.value)"><label class="tp-color-btn"><div class="tp-color-preview" id="thp-muted"></div><input type="color" oninput="onThemeColor('muted',this.value)"></label></div>
+  </div>
+  <div class="tp-footer"><button class="tp-reset" onclick="resetTheme()">초기화</button><button class="tp-apply" onclick="applyTheme()">적용 &amp; 닫기</button></div>
+</div>
+
+<!-- BLOCK ADD POPUP -->
+<div class="block-add-popup" id="block-add-popup">
+  <div class="bap-title">블록 추가</div>
+  <button class="bap-item" onclick="bapSelect('text')">    <span class="bap-icon">📝</span><span class="bap-name">텍스트</span>    <span class="bap-desc">서술 문단</span></button>
+  <button class="bap-item" onclick="bapSelect('heading')"> <span class="bap-icon">🔤</span><span class="bap-name">소제목</span>    <span class="bap-desc">구분 제목</span></button>
+  <button class="bap-item" onclick="bapSelect('textbox')"> <span class="bap-icon">💬</span><span class="bap-name">텍스트박스</span><span class="bap-desc">강조 박스</span></button>
+  <button class="bap-item" onclick="bapSelect('table')">   <span class="bap-icon">📊</span><span class="bap-name">표</span>        <span class="bap-desc">행/열 편집</span></button>
+  <button class="bap-item" onclick="bapSelect('list')">    <span class="bap-icon">📋</span><span class="bap-name">목록</span>      <span class="bap-desc">항목 리스트</span></button>
+  <button class="bap-item" onclick="bapSelect('meta')">    <span class="bap-icon">🏷️</span><span class="bap-name">메타 정보</span> <span class="bap-desc">담당·일정</span></button>
+  <button class="bap-item" onclick="bapSelect('kpi')">     <span class="bap-icon">📈</span><span class="bap-name">KPI 카드</span>  <span class="bap-desc">지표 강조</span></button>
+  <button class="bap-item" onclick="bapSelect('status')">  <span class="bap-icon">🔖</span><span class="bap-name">상태 배지</span> <span class="bap-desc">완료/진행중</span></button>
+  <button class="bap-item" onclick="bapSelect('image')">   <span class="bap-icon">🖼️</span><span class="bap-name">이미지</span>    <span class="bap-desc">파일·붙여넣기</span></button>
+</div>
+
+<!-- STATUS PICKER -->
+<div class="status-picker" id="status-picker">
+  <button class="sp-item" onclick="pickStatus('complete')">  <span class="badge badge-complete">완료</span></button>
+  <button class="sp-item" onclick="pickStatus('inprogress')"><span class="badge badge-inprogress">진행중</span></button>
+  <button class="sp-item" onclick="pickStatus('planned')">   <span class="badge badge-planned">예정</span></button>
+  <button class="sp-item" onclick="pickStatus('hold')">      <span class="badge badge-hold">보류</span></button>
+</div>
+
+<!-- MAIN -->
+<main class="main"><div class="main-inner" id="main"></div></main>
+
+<!-- MODAL: Section -->
+<div class="modal-ov" id="sec-modal">
+  <div class="modal">
+    <h3>새 섹션 추가</h3>
+    <label>섹션 제목</label><input id="sec-title-inp" placeholder="예: 5월 캠페인 기획">
+    <label>태그 (선택)</label><input id="sec-tag-inp" placeholder="예: 04 — Campaign">
+    <label>폴더에 추가 (선택)</label>
+    <select id="sec-folder-sel"><option value="">── 없음 (최상위)</option></select>
+    <div class="modal-btns">
+      <button class="m-btn m-cancel" onclick="closeModal('sec-modal')">취소</button>
+      <button class="m-btn m-confirm" onclick="confirmAddSec()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Folder -->
+<div class="modal-ov" id="folder-modal">
+  <div class="modal">
+    <h3>새 폴더 추가</h3>
+    <label>폴더 이름</label><input id="folder-name-inp" placeholder="예: 4월 업무">
+    <div class="modal-btns">
+      <button class="m-btn m-cancel" onclick="closeModal('folder-modal')">취소</button>
+      <button class="m-btn m-confirm" onclick="confirmAddFolder()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Block -->
+<div class="modal-ov" id="block-modal">
+  <div class="modal">
+    <h3>블록 추가</h3>
+    <div class="bt-grid">
+      <div class="bt-card" onclick="selBT('text')"    id="bt-text">    <div class="bt-icon">📝</div><div class="bt-name">텍스트</div>    <div class="bt-desc">서술 문단</div></div>
+      <div class="bt-card" onclick="selBT('heading')" id="bt-heading"> <div class="bt-icon">🔤</div><div class="bt-name">소제목</div>    <div class="bt-desc">구분 제목</div></div>
+      <div class="bt-card" onclick="selBT('textbox')" id="bt-textbox"> <div class="bt-icon">💬</div><div class="bt-name">텍스트박스</div><div class="bt-desc">강조 박스</div></div>
+      <div class="bt-card" onclick="selBT('table')"   id="bt-table">   <div class="bt-icon">📊</div><div class="bt-name">표</div>        <div class="bt-desc">행/열 편집</div></div>
+      <div class="bt-card" onclick="selBT('list')"    id="bt-list">    <div class="bt-icon">📋</div><div class="bt-name">목록</div>      <div class="bt-desc">항목 리스트</div></div>
+      <div class="bt-card" onclick="selBT('meta')"    id="bt-meta">    <div class="bt-icon">🏷️</div><div class="bt-name">메타 정보</div> <div class="bt-desc">담당·일정 등</div></div>
+      <div class="bt-card" onclick="selBT('kpi')"     id="bt-kpi">     <div class="bt-icon">📈</div><div class="bt-name">KPI 카드</div>  <div class="bt-desc">지표 강조</div></div>
+      <div class="bt-card" onclick="selBT('status')"  id="bt-status">  <div class="bt-icon">🔖</div><div class="bt-name">상태 배지</div> <div class="bt-desc">완료/진행중 등</div></div>
+      <div class="bt-card" onclick="selBT('image')"   id="bt-image">   <div class="bt-icon">🖼️</div><div class="bt-name">이미지</div>    <div class="bt-desc">파일 첨부</div></div>
+    </div>
+    <div id="cfg-table" style="display:none"><label>열 이름 (쉼표 구분)</label><input id="tbl-cols" value="업무항목, 담당자, 일정, 상태"><label>초기 행 수</label><input id="tbl-rows" type="number" value="2" min="1" max="30"></div>
+    <div id="cfg-list"  style="display:none"><label>항목 (줄바꿈 구분)</label><textarea id="list-items"></textarea></div>
+    <div id="cfg-kpi"   style="display:none"><label>KPI (줄바꿈: 값|레이블)</label><textarea id="kpi-items"></textarea></div>
+    <div id="cfg-meta"  style="display:none"><label>항목 (줄바꿈: 키|값)</label><textarea id="meta-items">담당자|홍길동
+일정|2026. 00. 00</textarea></div>
+    <div id="cfg-text"  style="display:none"><label>내용</label><textarea id="text-content"></textarea></div>
+    <div id="cfg-image" style="display:none">
+      <div class="img-modal-paste-zone" id="img-modal-paste-zone" tabindex="0" onclick="this.focus()">
+        <div id="img-modal-preview" style="display:none"><img id="img-modal-preview-img" style="max-width:100%;max-height:160px;border-radius:6px"></div>
+        <div id="img-modal-hint">
+          <div style="font-size:20px;margin-bottom:6px">📋</div>
+          <div style="font-size:12px;font-weight:600;color:var(--txt)">캡처 이미지 붙여넣기</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px">이 영역 클릭 후 <kbd>Ctrl+V</kbd></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin:8px 0"><div style="flex:1;height:1px;background:var(--bdr)"></div><span style="font-size:11px;color:var(--muted)">또는</span><div style="flex:1;height:1px;background:var(--bdr)"></div></div>
+      <label>파일 선택</label><input type="file" id="img-file-inp" accept="image/*" style="margin-bottom:8px">
+      <label>캡션 (선택)</label><input id="img-caption">
+    </div>
+    <div class="modal-btns">
+      <button class="m-btn m-cancel" onclick="closeModal('block-modal')">취소</button>
+      <button class="m-btn m-confirm" onclick="confirmAddBlock()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP JS -->
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
